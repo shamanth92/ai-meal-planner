@@ -13,15 +13,20 @@ import {
     Typography
 } from "@mui/material";
 import { CalendarMonth, WbSunny, Restaurant, Refresh, Info, Lightbulb, ArrowForward } from '@mui/icons-material';
-import { cuisines, daysOfWeek } from '../utils/data';
+import { countryFlagsCode, cuisines, daysOfWeek } from '../utils/data';
 import { MealFormInputs } from '../utils/types';
 import Loading from './loading';
+import MealReviewModal from './mealReviewModal';
 import { useRouter } from 'next/navigation';
 import { useMealPlanStore } from '../store/useMealPlanStore';
 
 export default function MealForm() {
     const [isLoading, setIsLoading] = React.useState(false);
     const [currentStep, setCurrentStep] = React.useState(0);
+    const [showModal, setShowModal] = React.useState(false);
+    const [suggestedMeals, setSuggestedMeals] = React.useState<any[]>([]);
+    const [currentThreadId, setCurrentThreadId] = React.useState<string>("");
+    const [isRegenerating, setIsRegenerating] = React.useState(false);
     const router = useRouter();
     const saveMealPlan = useMealPlanStore(state => state.saveMealPlan);
 
@@ -49,53 +54,70 @@ export default function MealForm() {
 
     const submitForm = async (data: MealFormInputs) => {
         console.log("Form submitted:", data);
-        if (data.mode === "daily") {
-            setIsLoading(true);
-            setCurrentStep(0);
-            const response = await fetch('http://localhost:3000/api/startPlan', {
-                method: 'POST',
-                body: JSON.stringify({
-                    mode: data.mode,           // Daily mode
-                    cuisines: [data.dailyCuisine],
-                    goal: data.goal,
-                    dietary: data.dietType,
-                    budget: data.budget,
-                    mealTime: data.mealTime       // Required for daily mode
-                })
+        // if (data.mode === "daily") {
+        setIsLoading(true);
+        setCurrentStep(0);
+        const cuisines = data.mode === 'daily' 
+            ? [data.dailyCuisine]
+            : Object.values(data.weeklyCuisines || {});
+
+        const response = await fetch('http://localhost:3000/api/startPlan', {
+            method: 'POST',
+            body: JSON.stringify({
+                mode: data.mode,
+                cuisines: cuisines,
+                goal: data.goal,
+                dietary: data.dietType,
+                budget: data.budget,
+                mealTime: data.mealTime       // Required for daily mode
+            })
+        });
+
+        const { threadId, sseUrl } = await response.json();
+        console.log("Response:", threadId, sseUrl);
+        setCurrentThreadId(threadId);
+
+        const eventSource = new EventSource(`http://localhost:5000${sseUrl}`);
+
+        eventSource.addEventListener('node_complete', (event) => {
+            const data = JSON.parse(event.data);
+            console.log(`Node completed: ${data.node}`);
+            if (data.node === "mealSuggester") {
+                setCurrentStep(1);
+            }
+            if (data.node === "mealPicker") {
+                setCurrentStep(2);
+            }
+            if (data.node === "recipeFetcher") {
+                setCurrentStep(3);
+            }
+        });
+
+        if (data.mode === "weekly") {
+            eventSource.addEventListener('interrupt', (event) => {
+                const eventData = JSON.parse(event.data);
+                console.log('⏸️ Interrupt:', eventData.question);
+                console.log('Meals:', eventData.meals);
+
+                setSuggestedMeals(eventData.meals || []);
+                setShowModal(true);
+                setIsRegenerating(false); // Reset regenerating state when new meals arrive
             });
-
-            const { threadId, sseUrl } = await response.json();
-            console.log("Response:", threadId, sseUrl);
-
-            const eventSource = new EventSource(`http://localhost:5000${sseUrl}`);
-
-            eventSource.addEventListener('node_complete', (event) => {
-                const data = JSON.parse(event.data);
-                console.log(`Node completed: ${data.node}`);
-                if (data.node === "mealSuggester") {
-                    setCurrentStep(1);
-                }
-                if (data.node === "mealPicker") {
-                    setCurrentStep(2);
-                }
-                if (data.node === "recipeFetcher") {
-                    setCurrentStep(3);
-                }
-            });
-
-            eventSource.addEventListener('complete', (event) => {
-                const responseData = JSON.parse(event.data);
-                console.log('Final results:', responseData.finalState);
-                
-                // Save the API response to store
-                saveMealPlan(responseData.finalState);
-                
-                eventSource.close();
-                router.push("/plan/daily");
-            });
-        } else {
-
         }
+
+        eventSource.addEventListener('complete', (event) => {
+            const responseData = JSON.parse(event.data);
+            console.log('Final results:', responseData.finalState);
+
+            // Save the API response to store
+            saveMealPlan(responseData.finalState);
+
+            eventSource.close();
+            router.push(`/plan/${data.mode}`);
+        });
+        // } else {
+
+        // }
     };
 
     const resetForm = () => {
@@ -103,7 +125,26 @@ export default function MealForm() {
     };
 
     if (isLoading) {
-        return <Loading currentStep={currentStep} />;
+        return (
+            <>
+                <Loading 
+                    currentStep={currentStep} 
+                    showRegenerating={mode === "weekly" && isRegenerating} 
+                />
+                <MealReviewModal
+                    open={showModal}
+                    onClose={() => {
+                        setShowModal(false);
+                        if (isRegenerating) {
+                            setCurrentStep(2); // Set to regenerating step (index 2 = third step)
+                        }
+                    }}
+                    meals={suggestedMeals}
+                    threadId={currentThreadId}
+                    onRegenerateComplete={() => setIsRegenerating(true)}
+                />
+            </>
+        );
     }
 
     return (
@@ -240,9 +281,9 @@ export default function MealForm() {
                                     render={({ field }) => (
                                         <FormControl fullWidth size="small">
                                             <Select {...field}>
-                                                {cuisines.map((cuisine) => (
+                                                {cuisines.map((cuisine, index) => (
                                                     <MenuItem key={cuisine} value={cuisine.toLowerCase()}>
-                                                        {cuisine}
+                                                        <img src={`https://flagsapi.com/${countryFlagsCode[index]}/flat/64.png`} alt={cuisine} style={{ width: '20px', height: '15px', marginRight: '8px' }} /> {cuisine}
                                                     </MenuItem>
                                                 ))}
                                             </Select>
@@ -269,9 +310,9 @@ export default function MealForm() {
                         render={({ field }) => (
                             <FormControl fullWidth>
                                 <Select {...field}>
-                                    {cuisines.map((cuisine) => (
+                                    {cuisines.map((cuisine, index) => (
                                         <MenuItem key={cuisine} value={cuisine.toLowerCase()}>
-                                            {cuisine}
+                                            <img src={`https://flagsapi.com/${countryFlagsCode[index]}/flat/64.png`} alt={cuisine} style={{ width: '20px', height: '15px', marginRight: '8px' }} /> {cuisine}
                                         </MenuItem>
                                     ))}
                                 </Select>

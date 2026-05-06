@@ -4,9 +4,21 @@ import { steps } from '../utils/data';
 
 interface LoadingProps {
     currentStep: number;
+    showRegenerating?: boolean;
 }
 
-export default function Loading({ currentStep }: LoadingProps) {
+export default function Loading({ currentStep, showRegenerating = false }: LoadingProps) {
+    // Insert regenerating step at position 2 if showRegenerating is true
+    const displaySteps = showRegenerating 
+        ? [
+            steps[0], // Understanding your preferences
+            steps[1], // Finding the best recipes
+            "Regenerating recipes with your feedback",
+            steps[2], // Balancing nutrition & calories
+            steps[3]  // Finalizing your meal plan
+          ]
+        : steps;
+
     return (
         <Box className="flex flex-col items-center justify-center min-h-screen p-8 max-w-2xl mx-auto">
             <Box className="mb-8">
@@ -25,13 +37,13 @@ export default function Loading({ currentStep }: LoadingProps) {
                 <Box className="h-2 bg-gray-200 rounded-full overflow-hidden">
                     <Box 
                         className="h-full bg-gradient-to-r from-purple-600 to-purple-400 transition-all duration-500"
-                        sx={{ width: `${(currentStep / steps.length) * 100}%` }}
+                        sx={{ width: `${(currentStep / displaySteps.length) * 100}%` }}
                     />
                 </Box>
             </Box>
             
             <Box className="w-full space-y-3">
-                {steps.map((step, index) => (
+                {displaySteps.map((step, index) => (
                     <Box key={index} className="flex items-center gap-3">
                         {index < currentStep ? (
                             <CheckCircle className="text-green-500" />

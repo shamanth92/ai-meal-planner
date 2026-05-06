@@ -1,0 +1,7 @@
+Daily:
+    - Meal Image
+    - Grocery List
+    - Save to Favorites
+    - Linear Progress
+    - Remove Regeneration
+    - Improve UX
