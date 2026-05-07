@@ -7,7 +7,6 @@ export const daysOfWeek = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 export const steps = [
     "Understanding your preferences",
     "Finding the best recipes",
-    "Regenerating recipes with your feedback",
     "Balancing nutrition & calories",
     "Finalizing your meal plan"
 ];

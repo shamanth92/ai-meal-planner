@@ -130,6 +130,7 @@ export default function MealForm() {
                 <Loading 
                     currentStep={currentStep} 
                     showRegenerating={mode === "weekly" && isRegenerating} 
+                    mode={mode}
                 />
                 <MealReviewModal
                     open={showModal}

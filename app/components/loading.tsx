@@ -1,15 +1,16 @@
-import { Box, Typography } from "@mui/material";
+import { Box, LinearProgress, Typography } from "@mui/material";
 import { CheckCircle, RadioButtonUnchecked, SmartToy } from '@mui/icons-material';
 import { steps } from '../utils/data';
 
 interface LoadingProps {
     currentStep: number;
     showRegenerating?: boolean;
+    mode?: string;
 }
 
-export default function Loading({ currentStep, showRegenerating = false }: LoadingProps) {
+export default function Loading({ currentStep, showRegenerating = false, mode }: LoadingProps) {
     // Insert regenerating step at position 2 if showRegenerating is true
-    const displaySteps = showRegenerating 
+    const displaySteps = showRegenerating && mode === "weekly"
         ? [
             steps[0], // Understanding your preferences
             steps[1], // Finding the best recipes
@@ -33,13 +34,14 @@ export default function Loading({ currentStep, showRegenerating = false }: Loadi
                 Our AI agent is analyzing recipes, nutrition and your preferences.
             </Typography>
             
-            <Box className="w-full mb-8">
-                <Box className="h-2 bg-gray-200 rounded-full overflow-hidden">
-                    <Box 
+            <Box className="w-full mb-8 mt-2">
+                {/* <Box className="h-2 bg-gray-200 rounded-full overflow-hidden"> */}
+                    {/* <Box 
                         className="h-full bg-gradient-to-r from-purple-600 to-purple-400 transition-all duration-500"
                         sx={{ width: `${(currentStep / displaySteps.length) * 100}%` }}
-                    />
-                </Box>
+                    /> */}
+                    <LinearProgress color="secondary" aria-label="Loading…" />
+                {/* </Box> */}
             </Box>
             
             <Box className="w-full space-y-3">

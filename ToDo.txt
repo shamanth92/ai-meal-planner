@@ -1,7 +1,7 @@
 Daily:
-    - Meal Image
-    - Grocery List
-    - Save to Favorites
-    - Linear Progress
-    - Remove Regeneration
-    - Improve UX
+    - Meal Image (DONE)
+    - Grocery List (DONE)
+    - Save to Favorites (NOT MVP)
+    - Linear Progress (DONE)
+    - Remove Regeneration (DONE)
+    - Refactor code?

@@ -32,6 +32,7 @@ export type Meal = {
     cuisine: string;
     keywords: string[];
     fallbackKeywords: string[];
+    imageUrl?: string;
 };
 
 export type RecipeStep = {
