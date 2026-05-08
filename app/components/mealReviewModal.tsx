@@ -1,6 +1,9 @@
 import * as React from 'react';
 import { Modal, Box, Typography, Button, TextField } from '@mui/material';
 import { CheckCircle, Refresh } from '@mui/icons-material';
+import { useMealImage } from '../hooks/useMealImage';
+import { useMealPlanStore } from '../store/useMealPlanStore';
+import MealGridDisplay from './MealGridDisplay';
 
 interface MealReviewModalProps {
     open: boolean;
@@ -14,6 +17,20 @@ export default function MealReviewModal({ open, onClose, meals, threadId, onRege
     const [showFeedback, setShowFeedback] = React.useState(false);
     const [feedback, setFeedback] = React.useState('');
     const [isSubmitting, setIsSubmitting] = React.useState(false);
+    
+    // Get meals from store to access updated imageUrls
+    const mealPlan = useMealPlanStore(state => state.mealPlan);
+    const mealsWithImages = mealPlan?.meals || meals;
+
+    // Fetch images for each meal using individual hook calls
+    // Note: This assumes a maximum of 7 meals (one per day of the week)
+    useMealImage(meals[0]?.name || '', 0, meals[0]?.imageUrl);
+    useMealImage(meals[1]?.name || '', 1, meals[1]?.imageUrl);
+    useMealImage(meals[2]?.name || '', 2, meals[2]?.imageUrl);
+    useMealImage(meals[3]?.name || '', 3, meals[3]?.imageUrl);
+    useMealImage(meals[4]?.name || '', 4, meals[4]?.imageUrl);
+    useMealImage(meals[5]?.name || '', 5, meals[5]?.imageUrl);
+    useMealImage(meals[6]?.name || '', 6, meals[6]?.imageUrl);
 
     const handleApprove = async () => {
         // Close modal immediately
@@ -103,72 +120,10 @@ export default function MealReviewModal({ open, onClose, meals, threadId, onRege
                 </Typography>
 
                 <Typography variant="body2" sx={{ mb: 3, color: 'text.secondary' }}>
-                    We've selected {meals.length} meals for your week. Review them below and let us know if you'd like to proceed or make changes.
+                    We've selected {mealsWithImages.length} meals for your week. Review them below and let us know if you'd like to proceed or make changes.
                 </Typography>
 
-                {/* Meal cards will be displayed here */}
-                <Box sx={{ 
-                    display: 'grid', 
-                    gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', 
-                    gap: 2, 
-                    mb: 4 
-                }}>
-                    {meals.map((meal, index) => {
-                        const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-                        return (
-                            <Box 
-                                key={index} 
-                                sx={{ 
-                                    display: 'flex',
-                                    flexDirection: 'column',
-                                    alignItems: 'center',
-                                    p: 1.5,
-                                    border: '1px solid #e0e0e0', 
-                                    borderRadius: 2,
-                                    bgcolor: '#fafafa',
-                                    textAlign: 'center'
-                                }}
-                            >
-                                <Typography variant="caption" sx={{ fontWeight: 'bold', mb: 0.5 }}>
-                                    {days[index] || `Day ${index + 1}`}
-                                </Typography>
-                                
-                                <Box sx={{ 
-                                    width: '100%', 
-                                    height: 100, 
-                                    borderRadius: '50%', 
-                                    overflow: 'hidden',
-                                    mb: 1,
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    justifyContent: 'center',
-                                    bgcolor: '#fff'
-                                }}>
-                                    <img
-                                        src="https://images.unsplash.com/photo-1751560455942-f859f1215826?w=500&auto=format&fit=crop&q=60&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxzZWFyY2h8N3x8bWFzYWxhJTIwZG9zYXxlbnwwfDF8MHx8fDA%3D"
-                                        alt={meal.name || 'Meal'}
-                                        style={{ 
-                                            width: '100%', 
-                                            height: '100%', 
-                                            objectFit: 'cover' 
-                                        }}
-                                    />
-                                </Box>
-
-                                <Typography variant="body2" sx={{ fontWeight: 500, mb: 1, lineHeight: 1.2 }}>
-                                    {meal.name || 'Meal Name'}
-                                </Typography>
-
-                                <Typography variant="caption" sx={{ color: 'text.secondary', fontSize: '0.7rem' }}>
-                                    {meal.calories || 0} kcal
-                                </Typography>
-                                <Typography variant="caption" sx={{ color: 'text.secondary', fontSize: '0.7rem' }}>
-                                    {meal.protein || 0}g Protein
-                                </Typography>
-                            </Box>
-                        );
-                    })}
-                </Box>
+                <MealGridDisplay meals={mealsWithImages} />
 
                 {/* Feedback section - shown when user clicks No */}
                 {showFeedback && (

@@ -99,7 +99,22 @@ export default function MealForm() {
                 console.log('⏸️ Interrupt:', eventData.question);
                 console.log('Meals:', eventData.meals);
 
-                setSuggestedMeals(eventData.meals || []);
+                const meals = eventData.meals || [];
+                setSuggestedMeals(meals);
+                
+                // Save meals to store so useMealImage can update them with imageUrls
+                // Create a temporary meal plan structure for the store
+                saveMealPlan({
+                    meals: meals,
+                    recipes: [], // Will be populated later
+                    groceryList: [],
+                    recipeQuery: {
+                        mealTime: data.mealTime || '',
+                        cuisines: data.cuisines || [],
+                        dietaryRestrictions: data.dietaryRestrictions || []
+                    }
+                });
+                
                 setShowModal(true);
                 setIsRegenerating(false); // Reset regenerating state when new meals arrive
             });
