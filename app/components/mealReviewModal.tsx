@@ -10,10 +10,12 @@ interface MealReviewModalProps {
     onClose: () => void;
     meals: any[];
     threadId: string;
-    onRegenerateComplete?: () => void;
+    onRegenerate?: (feedback: string) => Promise<void>;
+    mockMode?: boolean;
+    onMockApprove?: () => void;
 }
 
-export default function MealReviewModal({ open, onClose, meals, threadId, onRegenerateComplete }: MealReviewModalProps) {
+export default function MealReviewModal({ open, onClose, meals, threadId, onRegenerate, mockMode = false, onMockApprove }: MealReviewModalProps) {
     const [showFeedback, setShowFeedback] = React.useState(false);
     const [feedback, setFeedback] = React.useState('');
     const [isSubmitting, setIsSubmitting] = React.useState(false);
@@ -37,6 +39,12 @@ export default function MealReviewModal({ open, onClose, meals, threadId, onRege
         onClose();
         setShowFeedback(false);
         setFeedback('');
+        
+        // In mock mode, call the mock approve handler
+        if (mockMode && onMockApprove) {
+            onMockApprove();
+            return;
+        }
         
         setIsSubmitting(true);
         try {
@@ -66,24 +74,10 @@ export default function MealReviewModal({ open, onClose, meals, threadId, onRege
         }
 
         setIsSubmitting(true);
-        try {
-            const response = await fetch('/api/resumePlan', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    threadId: threadId,
-                    decision: 'no',
-                    feedback: feedback
-                })
-            });
 
-            if (response.ok) {
-                // Trigger regenerating state before closing modal
-                if (onRegenerateComplete) {
-                    onRegenerateComplete();
-                }
-                // Close modal and go back to loading screen
-                onClose();
+        try {
+            if (onRegenerate) {
+                await onRegenerate(feedback);
                 setShowFeedback(false);
                 setFeedback('');
             }

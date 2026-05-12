@@ -66,6 +66,7 @@ export default function DailyPlan() {
                 open={showGroceryModal}
                 onClose={() => setShowGroceryModal(false)}
                 groceryList={mealPlan?.groceryList || []}
+                meal={mealPlan?.meals[0]!}
             />
         </div>
     );

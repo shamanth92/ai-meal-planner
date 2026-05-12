@@ -27,6 +27,7 @@ export default function MealForm() {
     const [suggestedMeals, setSuggestedMeals] = React.useState<any[]>([]);
     const [currentThreadId, setCurrentThreadId] = React.useState<string>("");
     const [isRegenerating, setIsRegenerating] = React.useState(false);
+    const [currentEventSource, setCurrentEventSource] = React.useState<EventSource | null>(null);
     const router = useRouter();
     const saveMealPlan = useMealPlanStore(state => state.saveMealPlan);
 
@@ -53,10 +54,9 @@ export default function MealForm() {
     const mode = watch("mode");
 
     const submitForm = async (data: MealFormInputs) => {
-        console.log("Form submitted:", data);
-        // if (data.mode === "daily") {
         setIsLoading(true);
         setCurrentStep(0);
+
         const cuisines = data.mode === 'daily' 
             ? [data.dailyCuisine]
             : Object.values(data.weeklyCuisines || {});
@@ -78,6 +78,7 @@ export default function MealForm() {
         setCurrentThreadId(threadId);
 
         const eventSource = new EventSource(`http://localhost:5000${sseUrl}`);
+        setCurrentEventSource(eventSource);
 
         eventSource.addEventListener('node_complete', (event) => {
             const data = JSON.parse(event.data);
@@ -109,9 +110,12 @@ export default function MealForm() {
                     recipes: [], // Will be populated later
                     groceryList: [],
                     recipeQuery: {
+                        mode: data.mode,
                         mealTime: data.mealTime || '',
-                        cuisines: data.cuisines || [],
-                        dietaryRestrictions: data.dietaryRestrictions || []
+                        cuisines: cuisines,
+                        goal: data.goal || '',
+                        dietary: data.dietType || '',
+                        budget: data.budget
                     }
                 });
                 
@@ -124,10 +128,23 @@ export default function MealForm() {
             const responseData = JSON.parse(event.data);
             console.log('Final results:', responseData.finalState);
 
-            // Save the API response to store
-            saveMealPlan(responseData.finalState);
+            // Preserve imageUrls from current store state
+            const currentMealPlan = useMealPlanStore.getState().mealPlan;
+            const finalState = responseData.finalState;
+            
+            // Merge imageUrls from current meals into final state meals
+            if (currentMealPlan?.meals && finalState.meals) {
+                finalState.meals = finalState.meals.map((meal: any, index: number) => ({
+                    ...meal,
+                    imageUrl: currentMealPlan.meals[index]?.imageUrl || meal.imageUrl
+                }));
+            }
+
+            // Save the API response to store with preserved images
+            saveMealPlan(finalState);
 
             eventSource.close();
+            setCurrentEventSource(null);
             router.push(`/plan/${data.mode}`);
         });
         // } else {
@@ -135,31 +152,134 @@ export default function MealForm() {
         // }
     };
 
+    const handleRegenerate = async (feedback: string) => {
+        // Close existing EventSource if any
+        if (currentEventSource) {
+            currentEventSource.close();
+            setCurrentEventSource(null);
+        }
+
+        setIsRegenerating(true);
+        setShowModal(false);
+        setCurrentStep(1);
+
+        try {
+            const response = await fetch('/api/resumePlan', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    threadId: currentThreadId,
+                    decision: 'no',
+                    feedback: feedback
+                })
+            });
+
+            const responseData = await response.json();
+            console.log("Regenerate Response (full):", responseData);
+            const { threadId, sseUrl, message, decision } = responseData;
+            console.log("Extracted values:", { threadId, sseUrl, message, decision });
+
+            const eventSource = new EventSource(`http://localhost:5000${sseUrl}`);
+            setCurrentEventSource(eventSource);
+
+            eventSource.addEventListener('node_complete', (event) => {
+                const data = JSON.parse(event.data);
+                console.log(`Node completed: ${data.node}`);
+                if (data.node === "mealSuggester") {
+                    setCurrentStep(1);
+                }
+                if (data.node === "mealPicker") {
+                    setCurrentStep(2);
+                }
+                if (data.node === "recipeFetcher") {
+                    setCurrentStep(3);
+                }
+            });
+
+            eventSource.addEventListener('interrupt', (event) => {
+                const eventData = JSON.parse(event.data);
+                console.log('⏸️ Second Interrupt:', eventData.question);
+                console.log('Meals:', eventData.meals);
+
+                const meals = eventData.meals || [];
+                setSuggestedMeals(meals);
+                
+                // Save meals to store so useMealImage can update them with imageUrls
+                saveMealPlan({
+                    meals: meals,
+                    recipes: [],
+                    groceryList: [],
+                    recipeQuery: {
+                        mode: mode,
+                        mealTime: watch('mealTime') || '',
+                        cuisines: Object.values(watch('weeklyCuisines') || {}),
+                        goal: watch('goal') || '',
+                        dietary: watch('dietType') || '',
+                        budget: watch('budget')
+                    }
+                });
+                
+                setShowModal(true);
+                setIsRegenerating(false);
+            });
+
+            eventSource.addEventListener('complete', (event) => {
+                const responseData = JSON.parse(event.data);
+                console.log('Final results after regeneration:', responseData.finalState);
+
+                // Preserve imageUrls from current store state
+                const currentMealPlan = useMealPlanStore.getState().mealPlan;
+                const finalState = responseData.finalState;
+                
+                // Merge imageUrls from current meals into final state meals
+                if (currentMealPlan?.meals && finalState.meals) {
+                    finalState.meals = finalState.meals.map((meal: any, index: number) => ({
+                        ...meal,
+                        imageUrl: currentMealPlan.meals[index]?.imageUrl || meal.imageUrl
+                    }));
+                }
+
+                // Save the API response to store with preserved images
+                saveMealPlan(finalState);
+
+                eventSource.close();
+                setCurrentEventSource(null);
+                router.push(`/plan/${mode}`);
+            });
+        } catch (error) {
+            console.error('Error regenerating meals:', error);
+            setIsRegenerating(false);
+        }
+    };
+
     const resetForm = () => {
         reset();
     };
 
-    if (isLoading) {
+    if (isLoading && !showModal) {
         return (
-            <>
-                <Loading 
-                    currentStep={currentStep} 
-                    showRegenerating={mode === "weekly" && isRegenerating} 
-                    mode={mode}
-                />
-                <MealReviewModal
-                    open={showModal}
-                    onClose={() => {
-                        setShowModal(false);
-                        if (isRegenerating) {
-                            setCurrentStep(2); // Set to regenerating step (index 2 = third step)
-                        }
-                    }}
-                    meals={suggestedMeals}
-                    threadId={currentThreadId}
-                    onRegenerateComplete={() => setIsRegenerating(true)}
-                />
-            </>
+            <Loading 
+                currentStep={currentStep} 
+                showRegenerating={mode === "weekly" && isRegenerating} 
+                mode={mode}
+            />
+        );
+    }
+
+    if (showModal) {
+        return (
+            <MealReviewModal
+                open={showModal}
+                onClose={() => {
+                    setShowModal(false);
+                    if (isRegenerating) {
+                        setCurrentStep(2);
+                    }
+                }}
+                meals={suggestedMeals}
+                threadId={currentThreadId}
+                onRegenerate={handleRegenerate}
+            />
         );
     }
 

@@ -1,5 +1,5 @@
 import { Box, Button, Modal, Typography } from "@mui/material";
-import { GroceryItem } from "../utils/types";
+import { GroceryItem, Meal } from "../utils/types";
 
 /**
  * Props for the GroceryListModal component
@@ -11,6 +11,8 @@ interface GroceryListModalProps {
     onClose: () => void;
     /** Array of grocery items grouped by meal */
     groceryList: GroceryItem[];
+    /** Meal data containing name and description */
+    meal: Meal;
 }
 
 /**
@@ -22,8 +24,11 @@ interface GroceryListModalProps {
  * @param open - Whether the modal is visible
  * @param onClose - Function to call when closing the modal
  * @param groceryList - Array of grocery items to display
+ * @param meal - Meal data containing name and description
  */
-export default function GroceryListModal({ open, onClose, groceryList }: GroceryListModalProps) {
+export default function GroceryListModal({ open, onClose, groceryList, meal }: GroceryListModalProps) {
+    console.log('GroceryList: ', groceryList, meal.name)
+    const groceryForMeal = groceryList.filter(item => item.mealName === meal.name);
     return (
         <Modal open={open} onClose={onClose}>
             <Box sx={{
@@ -44,9 +49,9 @@ export default function GroceryListModal({ open, onClose, groceryList }: Grocery
                     Grocery List
                 </Typography>
 
-                {groceryList && groceryList.length > 0 ? (
+                {groceryForMeal && groceryForMeal.length > 0 ? (
                     <Box>
-                        {groceryList.map((item, index) => (
+                        {groceryForMeal.map((item, index) => (
                             <Box key={index} sx={{ mb: 3 }}>
                                 <Typography variant="h6" sx={{ fontWeight: 'bold', mb: 1.5, color: '#000' }}>
                                     {item.mealName}

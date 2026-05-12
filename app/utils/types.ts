@@ -62,9 +62,32 @@ export type GroceryItem = {
     groceryList: string[];
 };
 
+export type DailyNutrition = {
+    day: number;
+    calories: number;
+    protein: number;
+    carbs: number;
+};
+
+export type WeeklyNutrition = {
+    totals: {
+        calories: number;
+        protein: number;
+        carbs: number;
+    };
+    daily: DailyNutrition[];
+    analysis: {
+        summary: string;
+        pros: string[];
+        cons: string[];
+        recommendations: string[];
+    };
+};
+
 export type MealPlanResponse = {
     recipeQuery: RecipeQuery;
     meals: Meal[];
     recipes: Recipe[];
     groceryList: GroceryItem[];
+    weeklyNutrition?: WeeklyNutrition;
 };

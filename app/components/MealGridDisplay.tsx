@@ -8,6 +8,8 @@ interface MealGridDisplayProps {
     meals: any[];
     /** Optional custom day labels (defaults to Mon-Sun) */
     dayLabels?: string[];
+    /** Optional click handler for when a meal card is clicked */
+    onMealClick?: (meal: any, index: number) => void;
 }
 
 /**
@@ -26,7 +28,7 @@ interface MealGridDisplayProps {
  * @param meals - Array of meal objects with name, description, and imageUrl
  * @param dayLabels - Optional custom labels for each day
  */
-export default function MealGridDisplay({ meals, dayLabels }: MealGridDisplayProps) {
+export default function MealGridDisplay({ meals, dayLabels, onMealClick }: MealGridDisplayProps) {
     const defaultDays = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
     const days = dayLabels || defaultDays;
 
@@ -40,7 +42,8 @@ export default function MealGridDisplay({ meals, dayLabels }: MealGridDisplayPro
             {meals.map((meal, index) => {
                 return (
                     <Box 
-                        key={index} 
+                        key={index}
+                        onClick={() => onMealClick?.(meal, index)}
                         sx={{ 
                             display: 'flex',
                             flexDirection: 'column',
@@ -50,6 +53,7 @@ export default function MealGridDisplay({ meals, dayLabels }: MealGridDisplayPro
                             borderRadius: 2,
                             bgcolor: '#fafafa',
                             textAlign: 'center',
+                            cursor: onMealClick ? 'pointer' : 'default',
                             transition: 'transform 0.2s, box-shadow 0.2s',
                             '&:hover': {
                                 transform: 'translateY(-4px)',

@@ -41,18 +41,19 @@ export async function POST(request: Request) {
             }),
         },
     );
+    console.log('response:', response)
 
-    if (!response.ok) {
-        return new Response(
-            JSON.stringify({ error: "Failed to resume plan" }),
-            {
-                status: response.status,
-                headers: {
-                    "Content-Type": "application/json; charset=utf-8",
-                },
-            }
-        );
-    }
+    // if (!response.ok) {
+    //     return new Response(
+    //         JSON.stringify({ error: "Failed to resume plan" }),
+    //         {
+    //             status: response.status,
+    //             headers: {
+    //                 "Content-Type": "application/json; charset=utf-8",
+    //             },
+    //         }
+    //     );
+    // }
 
     const result = await response.json();
 

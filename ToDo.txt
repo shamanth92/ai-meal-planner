@@ -3,8 +3,8 @@ Daily:
 
 Weekly:
     - Save to Favorites (NOT MVP)
-    - Weekly View
-    - Weekly Grocery List
-    - Weekly Nutrition Summary
-    - Human Feedback - Image, Add description, remove nutrition.
     - Refactor Code and Add Comments
+
+
+
+    
