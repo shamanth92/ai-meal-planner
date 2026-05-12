@@ -3,8 +3,8 @@ import FoodBankIcon from '@mui/icons-material/FoodBank';
 import EggIcon from '@mui/icons-material/Egg';
 import RiceBowlIcon from '@mui/icons-material/RiceBowl';
 import LocalPizzaIcon from '@mui/icons-material/LocalPizza';
-import { Meal, Recipe } from "../utils/types";
-import { nutritionNames } from "../utils/data";
+import { Meal, Recipe } from "../../types";
+import { nutritionNames } from "../../lib/constants";
 
 type NutritionKey = keyof typeof nutritionNames;
 

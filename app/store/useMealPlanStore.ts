@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { MealPlanResponse } from '../utils/types';
+import { MealPlanResponse } from '../types';
 
 interface MealPlanStore {
     mealPlan: MealPlanResponse | null;

@@ -1,5 +1,5 @@
 import { Box, Button, Modal, Typography } from "@mui/material";
-import { GroceryItem, Meal } from "../utils/types";
+import { GroceryItem, Meal } from "../../types";
 
 /**
  * Props for the GroceryListModal component

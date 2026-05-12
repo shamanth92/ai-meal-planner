@@ -3,7 +3,7 @@ import * as React from 'react';
 import { Box, Card, CardContent, Typography } from "@mui/material";
 import { useRouter } from 'next/navigation';
 import { useMealPlanStore } from '../../store/useMealPlanStore';
-import MealGridDisplay from '../../components/MealGridDisplay';
+import MealGridDisplay from '../../components/meal/MealGridDisplay';
 
 export default function WeeklyPlan() {
     const router = useRouter();

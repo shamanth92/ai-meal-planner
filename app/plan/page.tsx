@@ -1,6 +1,6 @@
 import { Box } from "@mui/material";
 import { Restaurant } from "@mui/icons-material";
-import MealForm from "../components/mealForm";
+import MealForm from "../components/meal/MealForm";
 
 export default function Plan() {
   return (

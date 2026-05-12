@@ -3,8 +3,8 @@ import { Box } from "@mui/material";
 import { useMealPlanStore } from '../../store/useMealPlanStore';
 import { useState } from 'react';
 import { useMealImage } from '../../hooks/useMealImage';
-import GroceryListModal from '../../components/GroceryListModal';
-import MealCard from '../../components/MealCard';
+import GroceryListModal from '../../components/grocery/GroceryListModal';
+import MealCard from '../../components/meal/MealCard';
 
 /**
  * Daily Meal Plan Page Component

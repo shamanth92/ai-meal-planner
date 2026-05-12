@@ -1,6 +1,6 @@
 import { Box, LinearProgress, Typography } from "@mui/material";
 import { CheckCircle, RadioButtonUnchecked, SmartToy } from '@mui/icons-material';
-import { steps } from '../utils/data';
+import { steps } from '../../lib/constants';
 
 interface LoadingProps {
     currentStep: number;

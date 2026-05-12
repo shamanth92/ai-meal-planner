@@ -1,8 +1,8 @@
 import * as React from 'react';
 import { Modal, Box, Typography, Button, TextField } from '@mui/material';
 import { CheckCircle, Refresh } from '@mui/icons-material';
-import { useMealImage } from '../hooks/useMealImage';
-import { useMealPlanStore } from '../store/useMealPlanStore';
+import { useMealImage } from '../../hooks/useMealImage';
+import { useMealPlanStore } from '../../store/useMealPlanStore';
 import MealGridDisplay from './MealGridDisplay';
 
 interface MealReviewModalProps {

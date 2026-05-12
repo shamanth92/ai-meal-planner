@@ -13,12 +13,12 @@ import {
     Typography
 } from "@mui/material";
 import { CalendarMonth, WbSunny, Restaurant, Refresh, Info, Lightbulb, ArrowForward } from '@mui/icons-material';
-import { countryFlagsCode, cuisines, daysOfWeek } from '../utils/data';
-import { MealFormInputs } from '../utils/types';
-import Loading from './loading';
-import MealReviewModal from './mealReviewModal';
+import { countryFlagsCode, cuisines, daysOfWeek } from '../../lib/constants';
+import { MealFormInputs } from '../../types';
+import Loading from '../ui/Loading';
+import MealReviewModal from './MealReviewModal';
 import { useRouter } from 'next/navigation';
-import { useMealPlanStore } from '../store/useMealPlanStore';
+import { useMealPlanStore } from '../../store/useMealPlanStore';
 
 export default function MealForm() {
     const [isLoading, setIsLoading] = React.useState(false);

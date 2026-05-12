@@ -3,8 +3,8 @@ import * as React from 'react';
 import { Box, Typography } from "@mui/material";
 import { useRouter, useParams } from 'next/navigation';
 import { useMealPlanStore } from '../../store/useMealPlanStore';
-import MealCard from '../../components/MealCard';
-import GroceryListModal from '../../components/GroceryListModal';
+import MealCard from '../../components/meal/MealCard';
+import GroceryListModal from '../../components/grocery/GroceryListModal';
 
 export default function RecipePage() {
     const router = useRouter();
