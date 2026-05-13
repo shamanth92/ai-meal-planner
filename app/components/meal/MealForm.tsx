@@ -17,29 +17,50 @@ import { countryFlagsCode, cuisines, daysOfWeek } from '../../lib/constants';
 import { MealFormInputs } from '../../types';
 import Loading from '../ui/Loading';
 import MealReviewModal from './MealReviewModal';
-import { useRouter } from 'next/navigation';
-import { useMealPlanStore } from '../../store/useMealPlanStore';
+import { useMealPlanSSE } from '../../hooks/useMealPlanSSE';
 
+/**
+ * MealForm Component
+ * 
+ * Main form component for creating meal plans (daily or weekly)
+ * 
+ * Features:
+ * - Toggle between daily and weekly meal planning modes
+ * - Select meal time (breakfast, lunch, dinner)
+ * - Choose dietary goals and restrictions
+ * - Set budget constraints
+ * - Select cuisines (single for daily, one per day for weekly)
+ * - Real-time progress tracking via SSE
+ * - Meal review and regeneration flow (weekly mode)
+ * 
+ * The component delegates SSE logic to useMealPlanSSE hook for better separation of concerns
+ * 
+ * @returns JSX.Element - Meal planning form with conditional rendering for loading/modal states
+ */
 export default function MealForm() {
-    const [isLoading, setIsLoading] = React.useState(false);
-    const [currentStep, setCurrentStep] = React.useState(0);
-    const [showModal, setShowModal] = React.useState(false);
-    const [suggestedMeals, setSuggestedMeals] = React.useState<any[]>([]);
-    const [currentThreadId, setCurrentThreadId] = React.useState<string>("");
-    const [isRegenerating, setIsRegenerating] = React.useState(false);
-    const [currentEventSource, setCurrentEventSource] = React.useState<EventSource | null>(null);
-    const router = useRouter();
-    const saveMealPlan = useMealPlanStore(state => state.saveMealPlan);
+    // SSE hook provides all meal plan submission and state management logic
+    const {
+        submitPlan,          // Function to submit meal plan request
+        regeneratePlan,      // Function to regenerate meals with feedback
+        currentStep,         // Current progress step (0-3)
+        isLoading,           // Loading state during API calls
+        suggestedMeals,      // Array of suggested meals from interrupt event
+        showModal,           // Controls meal review modal visibility
+        isRegenerating,      // Flag for regeneration in progress
+        currentThreadId,     // Thread ID for current session
+        closeModal           // Function to close the modal
+    } = useMealPlanSSE();
 
+    // React Hook Form setup for form state management and validation
     const { control, handleSubmit, watch, reset, setValue } = useForm<MealFormInputs>({
         defaultValues: {
-            mode: "daily",
-            mealTime: "",
-            goal: "",
-            dietType: "",
-            budget: undefined,
-            dailyCuisine: "",
-            weeklyCuisines: {
+            mode: "daily",              // Default to daily meal planning
+            mealTime: "",               // Breakfast, lunch, or dinner
+            goal: "",                   // Balanced, weight loss, muscle gain, etc.
+            dietType: "",               // Vegetarian, non-veg, vegan
+            budget: undefined,          // Optional budget constraint
+            dailyCuisine: "",           // Single cuisine for daily mode
+            weeklyCuisines: {           // One cuisine per day for weekly mode
                 Mon: "",
                 Tue: "",
                 Wed: "",
@@ -51,142 +72,18 @@ export default function MealForm() {
         }
     });
 
+    // Watch mode to conditionally render daily vs weekly cuisine selection
     const mode = watch("mode");
 
-    const submitForm = async (data: MealFormInputs) => {
-        setIsLoading(true);
-        setCurrentStep(0);
-
-        const cuisines = data.mode === 'daily' 
-            ? [data.dailyCuisine]
-            : Object.values(data.weeklyCuisines || {});
-
-        const response = await fetch('http://localhost:3000/api/startPlan', {
-            method: 'POST',
-            body: JSON.stringify({
-                mode: data.mode,
-                cuisines: cuisines,
-                goal: data.goal,
-                dietary: data.dietType,
-                budget: data.budget,
-                mealTime: data.mealTime       // Required for daily mode
-            })
-        });
-
-        const { threadId, sseUrl } = await response.json();
-        console.log("Response:", threadId, sseUrl);
-        setCurrentThreadId(threadId);
-
-        const eventSource = new EventSource(`http://localhost:5000${sseUrl}`);
-        setCurrentEventSource(eventSource);
-
-        eventSource.addEventListener('node_complete', (event) => {
-            const data = JSON.parse(event.data);
-            console.log(`Node completed: ${data.node}`);
-            if (data.node === "mealSuggester") {
-                setCurrentStep(1);
-            }
-            if (data.node === "mealPicker") {
-                setCurrentStep(2);
-            }
-            if (data.node === "recipeFetcher") {
-                setCurrentStep(3);
-            }
-        });
-
-        if (data.mode === "weekly") {
-            eventSource.addEventListener('interrupt', (event) => {
-                const eventData = JSON.parse(event.data);
-                console.log('⏸️ Interrupt:', eventData.question);
-                console.log('Meals:', eventData.meals);
-
-                const meals = eventData.meals || [];
-                setSuggestedMeals(meals);
-                
-                // Save meals to store so useMealImage can update them with imageUrls
-                // Create a temporary meal plan structure for the store
-                saveMealPlan({
-                    meals: meals,
-                    recipes: [], // Will be populated later
-                    groceryList: [],
-                    recipeQuery: {
-                        mode: data.mode,
-                        mealTime: data.mealTime || '',
-                        cuisines: cuisines,
-                        goal: data.goal || '',
-                        dietary: data.dietType || '',
-                        budget: data.budget
-                    }
-                });
-                
-                setShowModal(true);
-                setIsRegenerating(false); // Reset regenerating state when new meals arrive
-            });
-        }
-
-        eventSource.addEventListener('complete', (event) => {
-            const responseData = JSON.parse(event.data);
-            console.log('Final results:', responseData.finalState);
-
-            // Preserve imageUrls from current store state
-            const currentMealPlan = useMealPlanStore.getState().mealPlan;
-            const finalState = responseData.finalState;
-            
-            // Merge imageUrls from current meals into final state meals
-            if (currentMealPlan?.meals && finalState.meals) {
-                finalState.meals = finalState.meals.map((meal: any, index: number) => ({
-                    ...meal,
-                    imageUrl: currentMealPlan.meals[index]?.imageUrl || meal.imageUrl
-                }));
-            }
-
-            // Save the API response to store with preserved images
-            saveMealPlan(finalState);
-
-            eventSource.close();
-            setCurrentEventSource(null);
-            router.push(`/plan/${data.mode}`);
-        });
-        // } else {
-
-        // }
-    };
-
-    const handleRegenerate = async (feedback: string) => {
-        // DON'T close EventSource - keep it open to receive continued events
-        // The existing EventSource will receive the interrupt and complete events after resume
-
-        setIsRegenerating(true);
-        setShowModal(false);
-        setCurrentStep(1);
-
-        try {
-            // Just call resume - the existing EventSource listeners will handle the events
-            await fetch('/api/resumePlan', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    threadId: currentThreadId,
-                    decision: 'no',
-                    feedback: feedback
-                })
-            });
-
-            console.log('Resume called with feedback, waiting for events on existing EventSource...');
-            // The existing EventSource will now receive:
-            // 1. node_complete events as the graph continues
-            // 2. interrupt event with new meals
-            // 3. complete event when user approves
-        } catch (error) {
-            console.error('Error regenerating meals:', error);
-            setIsRegenerating(false);
-        }
-    };
-
+    /**
+     * Resets the form to default values
+     */
     const resetForm = () => {
         reset();
     };
 
+    // Show loading screen while meal plan is being generated
+    // Hide loading when modal is shown (during meal review)
     if (isLoading && !showModal) {
         return (
             <Loading 
@@ -197,25 +94,23 @@ export default function MealForm() {
         );
     }
 
+    // Show meal review modal when meals are ready for user approval (weekly mode only)
     if (showModal) {
         return (
             <MealReviewModal
                 open={showModal}
-                onClose={() => {
-                    setShowModal(false);
-                    if (isRegenerating) {
-                        setCurrentStep(2);
-                    }
-                }}
+                onClose={closeModal}
                 meals={suggestedMeals}
                 threadId={currentThreadId}
-                onRegenerate={handleRegenerate}
+                onRegenerate={regeneratePlan}
             />
         );
     }
 
+    // Main form UI - only shown when not loading and modal is closed
     return (
-        <Box component="form" onSubmit={handleSubmit(submitForm)} sx={{ p: 3, maxWidth: 1000, mx: 'auto', display: 'flex', flexDirection: 'column', justifyContent: 'center', minHeight: '100vh' }}>
+        <Box component="form" onSubmit={handleSubmit(submitPlan)} sx={{ p: 3, maxWidth: 1000, mx: 'auto', display: 'flex', flexDirection: 'column', justifyContent: 'center', minHeight: '100vh' }}>
+            {/* Form fields are organized in a grid layout for better UX */}
             <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 3, mb: 3 }}>
                 <Box>
                     <Typography variant="body2" sx={{ mb: 1, fontWeight: 500 }}>Plan Mode</Typography>
@@ -324,7 +219,9 @@ export default function MealForm() {
                 />
             </Box>
 
+            {/* Cuisine Selection - Conditional rendering based on mode */}
             {mode === "weekly" ? (
+                // Weekly mode: Show 7 dropdowns (one for each day of the week)
                 <Box sx={{ mb: 3, p: 3, bgcolor: 'grey.50', borderRadius: 2 }}>
                     <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
                         <Typography variant="body2" sx={{ fontWeight: 500 }}>
@@ -336,6 +233,7 @@ export default function MealForm() {
                         Select a cuisine for each day of the week (up to 7).
                     </Typography>
 
+                    {/* Grid layout for 7 days - each day gets its own cuisine selector */}
                     <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 2 }}>
                         {daysOfWeek.map((day) => (
                             <Box key={day}>
@@ -349,7 +247,7 @@ export default function MealForm() {
                                         <FormControl fullWidth size="small">
                                             <Select {...field}>
                                                 {cuisines.map((cuisine, index) => (
-                                                    <MenuItem key={cuisine} value={cuisine.toLowerCase()}>
+                                                    <MenuItem key={cuisine} value={cuisine}>
                                                         <img src={`https://flagsapi.com/${countryFlagsCode[index]}/flat/64.png`} alt={cuisine} style={{ width: '20px', height: '15px', marginRight: '8px' }} /> {cuisine}
                                                     </MenuItem>
                                                 ))}
@@ -369,6 +267,7 @@ export default function MealForm() {
                     </Box>
                 </Box>
             ) : (
+                // Daily mode: Show single cuisine dropdown
                 <Box sx={{ mb: 3 }}>
                     <Typography variant="body2" sx={{ mb: 1, fontWeight: 500 }}>Cuisine</Typography>
                     <Controller
@@ -378,7 +277,7 @@ export default function MealForm() {
                             <FormControl fullWidth>
                                 <Select {...field}>
                                     {cuisines.map((cuisine, index) => (
-                                        <MenuItem key={cuisine} value={cuisine.toLowerCase()}>
+                                        <MenuItem key={cuisine} value={cuisine}>
                                             <img src={`https://flagsapi.com/${countryFlagsCode[index]}/flat/64.png`} alt={cuisine} style={{ width: '20px', height: '15px', marginRight: '8px' }} /> {cuisine}
                                         </MenuItem>
                                     ))}
@@ -389,7 +288,9 @@ export default function MealForm() {
                 </Box>
             )}
 
+            {/* Form Action Buttons */}
             <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 4 }}>
+                {/* Reset button - clears all form fields to default values */}
                 <Button
                     variant="outlined"
                     startIcon={<Refresh />}
@@ -398,6 +299,7 @@ export default function MealForm() {
                 >
                     Reset
                 </Button>
+                {/* Submit button - triggers form submission and meal plan generation */}
                 <Button
                     type="submit"
                     variant="contained"
