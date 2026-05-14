@@ -1,6 +1,5 @@
 export async function POST(request: Request) {
     const body = await request.json();
-    console.log("Body:", body, process.env.AGENT_URL);
     const response = await fetch(
         `${process.env.AGENT_URL}/api/recipe-plan/start`,
         {

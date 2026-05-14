@@ -8,7 +8,6 @@ import MealGridDisplay from '../../components/meal/MealGridDisplay';
 export default function WeeklyPlan() {
     const router = useRouter();
     const mealPlan = useMealPlanStore(state => state.mealPlan);
-    console.log(mealPlan);
 
     if (!mealPlan || !mealPlan.meals) {
         return (

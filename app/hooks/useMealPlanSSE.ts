@@ -81,7 +81,6 @@ export function useMealPlanSSE(): UseMealPlanSSEReturn {
         // Handle node completion events - tracks progress through the backend workflow
         eventSource.addEventListener('node_complete', (event) => {
             const data = JSON.parse(event.data);
-            console.log(`Node completed: ${data.node}`);
             
             if (data.node === "mealSuggester") {
                 setCurrentStep(1);
@@ -99,8 +98,6 @@ export function useMealPlanSSE(): UseMealPlanSSEReturn {
         if (mode === "weekly") {
             eventSource.addEventListener('interrupt', (event) => {
                 const eventData = JSON.parse(event.data);
-                console.log('⏸️ Interrupt:', eventData.question);
-                console.log('Meals:', eventData.meals);
 
                 const meals = eventData.meals || [];
                 setSuggestedMeals(meals);
@@ -119,7 +116,6 @@ export function useMealPlanSSE(): UseMealPlanSSEReturn {
         // Handle completion event - final meal plan is ready
         eventSource.addEventListener('complete', (event) => {
             const responseData = JSON.parse(event.data);
-            console.log('Final results:', responseData.finalState);
 
             // Preserve imageUrls from current store state
             // Images may have been fetched during the review process, so we merge them
@@ -157,17 +153,18 @@ export function useMealPlanSSE(): UseMealPlanSSEReturn {
             const payload = transformFormData(data);
             
             // Initiate meal plan generation on the backend
-            const response = await fetch('http://localhost:3000/api/startPlan', {
+            const response = await fetch('/api/startPlan', {
                 method: 'POST',
                 body: JSON.stringify(payload)
             });
 
             const { threadId, sseUrl } = await response.json();
-            console.log("Response:", threadId, sseUrl);
             setCurrentThreadId(threadId);
 
             // Create EventSource connection for real-time updates
-            const eventSource = new EventSource(`http://localhost:5000${sseUrl}`);
+            // NEXT_PUBLIC_ prefix is required because EventSource runs in the browser
+            const agentUrl = process.env.NEXT_PUBLIC_AGENT_URL || 'http://localhost:5000';
+            const eventSource = new EventSource(`${agentUrl}${sseUrl}`);
             eventSourceRef.current = eventSource;
             
             // Attach event listeners to handle SSE events
@@ -210,7 +207,6 @@ export function useMealPlanSSE(): UseMealPlanSSEReturn {
                 })
             });
 
-            console.log('Resume called with feedback, waiting for events on existing EventSource...');
             // The existing EventSource will now receive:
             // 1. node_complete events as the graph continues
             // 2. interrupt event with new meals

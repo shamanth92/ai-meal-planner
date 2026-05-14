@@ -2,8 +2,6 @@ export async function POST(request: Request) {
     const body = await request.json();
     const { threadId, decision, feedback } = body;
     
-    console.log("Resume Plan - Thread ID:", threadId, "Decision:", decision);
-    
     if (!threadId || !decision) {
         return new Response(
             JSON.stringify({ error: "threadId and decision are required" }),
@@ -41,7 +39,6 @@ export async function POST(request: Request) {
             }),
         },
     );
-    console.log('response:', response)
 
     // if (!response.ok) {
     //     return new Response(

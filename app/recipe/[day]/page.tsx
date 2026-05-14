@@ -32,9 +32,6 @@ export default function RecipePage() {
     
     // Match recipe by index since API doesn't guarantee name matching
     const recipe = mealPlan.recipes[mealIndex];
-    
-    console.log('Found meal at index:', mealIndex, meal);
-    console.log('Found recipe at index:', mealIndex, recipe);
 
     if (!meal || !recipe) {
         return (

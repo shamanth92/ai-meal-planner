@@ -27,7 +27,6 @@ interface GroceryListModalProps {
  * @param meal - Meal data containing name and description
  */
 export default function GroceryListModal({ open, onClose, groceryList, meal }: GroceryListModalProps) {
-    console.log('GroceryList: ', groceryList, meal.name)
     const groceryForMeal = groceryList.filter(item => item.mealName === meal.name);
     return (
         <Modal open={open} onClose={onClose}>
