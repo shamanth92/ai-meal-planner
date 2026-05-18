@@ -1,0 +1,39 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: meal-planner-ai
+  labels:
+    aiapp: mealplannerai
+  spec:
+    replicas: 1
+    selector:
+      matchLabels:
+        aiapp: mealplannerai
+    template:
+      metadata:
+        labels:
+          aiapp: mealplannerai
+      spec:
+        containers:
+          - name: meal-planner-container
+            image: meal-planner:latest
+            imagePullPolicy: IfNotPresent
+            ports:
+              - containerPort: 3000
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: meal-planner-ai-service
+  annotations:
+    service.beta.kubernetes.io/aws-load-balancer-scheme: "internet-facing"
+spec:
+  selector:
+    aiapp: mealplannerai
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 3000
+  type: NodePort
+
