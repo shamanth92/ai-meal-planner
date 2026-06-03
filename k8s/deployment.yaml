@@ -4,22 +4,27 @@ metadata:
   name: meal-planner-ai
   labels:
     aiapp: mealplannerai
-  spec:
-    replicas: 1
-    selector:
-      matchLabels:
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      aiapp: mealplannerai
+  template:
+    metadata:
+      labels:
         aiapp: mealplannerai
-    template:
-      metadata:
-        labels:
-          aiapp: mealplannerai
-      spec:
-        containers:
-          - name: meal-planner-container
-            image: meal-planner:latest
-            imagePullPolicy: IfNotPresent
-            ports:
-              - containerPort: 3000
+    spec:
+      containers:
+        - name: meal-planner-container
+          image: meal-planner:v2
+          imagePullPolicy: Never
+          ports:
+            - containerPort: 3000
+          env:
+            - name: AGENT_URL
+              value: "http://recipe-agent-service:5000"
+            - name: NEXT_PUBLIC_AGENT_URL
+              value: "http://localhost:5000"
 
 ---
 apiVersion: v1
@@ -33,7 +38,7 @@ spec:
     aiapp: mealplannerai
   ports:
     - protocol: TCP
-      port: 80
+      port: 3000
       targetPort: 3000
+      nodePort: 30080
   type: NodePort
-

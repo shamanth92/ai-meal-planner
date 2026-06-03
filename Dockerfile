@@ -17,6 +17,8 @@ COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 
 # Set environment variables for build
+ARG NEXT_PUBLIC_PEXELS_API_KEY
+ENV NEXT_PUBLIC_PEXELS_API_KEY=$NEXT_PUBLIC_PEXELS_API_KEY
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV NODE_ENV=production
 
